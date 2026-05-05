@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koi Pond Growth Simulator</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>🐟 Koi Pond Growth Simulator</h1>
+            <p class="subtitle">Model how water quality affects koi growth and size</p>
+        </header>
+
+        <nav class="tabs">
+            <button class="tab active" data-tab="setup">Pond Setup</button>
+            <button class="tab" data-tab="conditions">Water Quality</button>
+            <button class="tab" data-tab="simulation">Simulation</button>
+            <button class="tab" data-tab="scenarios">Scenarios</button>
+        </nav>
+
+        <!-- Pond Setup Tab -->
+        <section id="tab-setup" class="tab-content active">
+            <div class="card">
+                <h2>Pond Parameters</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="pond-volume">Volume (liters)</label>
+                        <input type="number" id="pond-volume" value="5000" min="100">
+                    </div>
+                    <div class="form-group">
+                        <label for="filtration">Filtration Capacity (0-1)</label>
+                        <input type="number" id="filtration" value="0.8" min="0" max="1" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="aeration">Aeration Capacity (0-1)</label>
+                        <input type="number" id="aeration" value="0.8" min="0" max="1" step="0.1">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Fish Stock</h2>
+                <div id="fish-list"></div>
+                <div class="form-grid add-fish-form">
+                    <div class="form-group">
+                        <label for="fish-name">Name/ID</label>
+                        <input type="text" id="fish-name" placeholder="e.g., Tancho">
+                    </div>
+                    <div class="form-group">
+                        <label for="fish-type">Type</label>
+                        <select id="fish-type">
+                            <option value="individual">Individual</option>
+                            <option value="cohort">Cohort</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="cohort-count-group" style="display:none">
+                        <label for="fish-count">Count</label>
+                        <input type="number" id="fish-count" value="5" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="fish-length">Length (cm)</label>
+                        <input type="number" id="fish-length" value="20" min="1" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="fish-weight">Weight (g)</label>
+                        <input type="number" id="fish-weight" value="150" min="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="fish-age">Age (months)</label>
+                        <input type="number" id="fish-age" value="12" min="0">
+                    </div>
+                    <div class="form-group">
+                        <label for="feed-quality">Feed Quality (0-1)</label>
+                        <input type="number" id="feed-quality" value="0.8" min="0" max="1" step="0.1">
+                    </div>
+                </div>
+                <button id="add-fish-btn" class="btn btn-primary">Add Fish</button>
+            </div>
+        </section>
+
+        <!-- Water Quality Tab -->
+        <section id="tab-conditions" class="tab-content">
+            <div class="card">
+                <h2>Water Quality Generation</h2>
+                <p class="hint">Configure parameters to generate synthetic daily water quality data, or the simulation will use defaults.</p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="sim-days">Simulation Days</label>
+                        <input type="number" id="sim-days" value="90" min="7" max="365">
+                    </div>
+                    <div class="form-group">
+                        <label for="start-month">Start Month</label>
+                        <select id="start-month">
+                            <option value="1">January</option>
+                            <option value="2">February</option>
+                            <option value="3">March</option>
+                            <option value="4">April</option>
+                            <option value="5" selected>May</option>
+                            <option value="6">June</option>
+                            <option value="7">July</option>
+                            <option value="8">August</option>
+                            <option value="9">September</option>
+                            <option value="10">October</option>
+                            <option value="11">November</option>
+                            <option value="12">December</option>
+                        </select>
+                    </div>
+                </div>
+                <h3>Baseline Water Parameters</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="base-ammonia">Baseline Ammonia (mg/L)</label>
+                        <input type="number" id="base-ammonia" value="0.1" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="base-nitrite">Baseline Nitrite (mg/L)</label>
+                        <input type="number" id="base-nitrite" value="0.05" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="base-ph">Baseline pH</label>
+                        <input type="number" id="base-ph" value="7.2" min="6" max="9" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="base-do">Baseline DO (mg/L)</label>
+                        <input type="number" id="base-do" value="8.0" min="0" max="14" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="daily-ration">Daily Ration (g/fish)</label>
+                        <input type="number" id="daily-ration" value="20" min="0" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label for="water-change-day">Water Change Day (weekly)</label>
+                        <select id="water-change-day">
+                            <option value="0">Sunday</option>
+                            <option value="1">Monday</option>
+                            <option value="6" selected>Saturday</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="water-change-pct">Water Change %</label>
+                        <input type="number" id="water-change-pct" value="10" min="0" max="50" step="5">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>Water Quality Penalty Thresholds</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="nh3-safe">NH₃ Safe (mg/L)</label>
+                        <input type="number" id="nh3-safe" value="0.02" min="0" step="0.005">
+                    </div>
+                    <div class="form-group">
+                        <label for="nh3-severe">NH₃ Severe (mg/L)</label>
+                        <input type="number" id="nh3-severe" value="0.10" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="no2-safe">NO₂ Safe (mg/L)</label>
+                        <input type="number" id="no2-safe" value="0.1" min="0" step="0.01">
+                    </div>
+                    <div class="form-group">
+                        <label for="no2-severe">NO₂ Severe (mg/L)</label>
+                        <input type="number" id="no2-severe" value="0.5" min="0" step="0.05">
+                    </div>
+                    <div class="form-group">
+                        <label for="do-lethal">DO Lethal (mg/L)</label>
+                        <input type="number" id="do-lethal" value="2.0" min="0" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="do-safe">DO Safe (mg/L)</label>
+                        <input type="number" id="do-safe" value="6.0" min="0" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="density-opt">Density Optimal (g/L)</label>
+                        <input type="number" id="density-opt" value="5.0" min="0" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="density-decay">Density Decay (k_D)</label>
+                        <input type="number" id="density-decay" value="0.3" min="0" step="0.05">
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Simulation Tab -->
+        <section id="tab-simulation" class="tab-content">
+            <div class="card">
+                <div class="sim-controls">
+                    <button id="run-sim-btn" class="btn btn-primary btn-large">▶ Run Simulation</button>
+                    <div id="sim-status" class="status"></div>
+                </div>
+            </div>
+
+            <div id="results" style="display:none">
+                <div class="card">
+                    <h2>Growth Summary</h2>
+                    <table id="results-table">
+                        <thead>
+                            <tr>
+                                <th>Fish</th>
+                                <th>Initial Weight (g)</th>
+                                <th>Final Weight (g)</th>
+                                <th>Weight Gain (g)</th>
+                                <th>Initial Length (cm)</th>
+                                <th>Final Length (cm)</th>
+                                <th>Length Gain (cm)</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+
+                <div class="card">
+                    <h2>Weight Over Time</h2>
+                    <canvas id="chart-weight"></canvas>
+                </div>
+
+                <div class="card">
+                    <h2>Length Over Time</h2>
+                    <canvas id="chart-length"></canvas>
+                </div>
+
+                <div class="card">
+                    <h2>Water Quality Risk Score</h2>
+                    <canvas id="chart-risk"></canvas>
+                </div>
+
+                <div class="card">
+                    <h2>Environmental Conditions</h2>
+                    <canvas id="chart-conditions"></canvas>
+                </div>
+
+                <div class="card">
+                    <h2>Limiting Factors (Sensitivity Analysis)</h2>
+                    <canvas id="chart-sensitivity"></canvas>
+                    <p class="hint">Lower values = more limiting to growth</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- Scenarios Tab -->
+        <section id="tab-scenarios" class="tab-content">
+            <div class="card">
+                <h2>What-If Scenarios</h2>
+                <p class="hint">Modify parameters and compare against the baseline simulation.</p>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="scenario-feed">Feed Multiplier</label>
+                        <input type="number" id="scenario-feed" value="1.0" min="0.1" max="3" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="scenario-filtration">Filtration Improvement (0-1)</label>
+                        <input type="number" id="scenario-filtration" value="0" min="0" max="0.9" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="scenario-aeration">Aeration Improvement (mg/L DO)</label>
+                        <input type="number" id="scenario-aeration" value="0" min="0" max="5" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="scenario-fish">Fish Count Multiplier</label>
+                        <input type="number" id="scenario-fish" value="1.0" min="0.5" max="3" step="0.1">
+                    </div>
+                    <div class="form-group">
+                        <label for="scenario-waterchange">Extra Water Change Fraction</label>
+                        <input type="number" id="scenario-waterchange" value="0" min="0" max="0.5" step="0.05">
+                    </div>
+                </div>
+                <button id="run-scenario-btn" class="btn btn-secondary btn-large">▶ Run Scenario Comparison</button>
+            </div>
+
+            <div id="scenario-results" style="display:none">
+                <div class="card">
+                    <h2>Scenario vs Baseline: Weight</h2>
+                    <canvas id="chart-scenario-weight"></canvas>
+                </div>
+                <div class="card">
+                    <h2>Scenario vs Baseline: Risk</h2>
+                    <canvas id="chart-scenario-risk"></canvas>
+                </div>
+                <div class="card">
+                    <h2>Scenario Summary</h2>
+                    <table id="scenario-table">
+                        <thead>
+                            <tr>
+                                <th>Fish</th>
+                                <th>Baseline Final (g)</th>
+                                <th>Scenario Final (g)</th>
+                                <th>Difference (g)</th>
+                                <th>% Change</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="simulation.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
